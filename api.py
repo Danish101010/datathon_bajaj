@@ -65,7 +65,9 @@ def send_gemini_multimodal(
         raise ValueError("GEMINI_API_KEY environment variable not set")
     
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    
+    # Use gemini-2.5-pro for better accuracy (slightly slower but more accurate)
+    model = genai.GenerativeModel('gemini-2.5-pro')
     
     # Load images using PIL
     image_parts = []
@@ -115,7 +117,7 @@ def send_gemini_multimodal(
         extracted_data = json.loads(response_text)
     except json.JSONDecodeError as e:
         print(f"JSON decode error: {e}")
-        print(f"Response text: {response_text[:500]}")
+        print(f"Response text (full): {response_text}")
         raise ValueError(f"Failed to parse Gemini response as JSON: {e}")
     
     # Get token usage
@@ -192,6 +194,7 @@ def extract_page_with_gemini(page_meta: Dict, page_type_hint: str) -> Dict:
         
         if not validate_extraction_response(extracted_data):
             print(f"Page {page_no}: Validation failed")
+            print(f"Extracted data: {json.dumps(extracted_data, indent=2)}")
             return {
                 'page_no': page_no,
                 'page_type': 'Other',
@@ -199,6 +202,57 @@ def extract_page_with_gemini(page_meta: Dict, page_type_hint: str) -> Dict:
                 'error': 'Invalid response format',
                 'token_usage': token_usage
             }
+        
+        # Check if bill_items is empty
+        if len(extracted_data.get('bill_items', [])) == 0:
+            print(f"Page {page_no}: WARNING - No items extracted!")
+            print(f"Full response: {json.dumps(extracted_data, indent=2)}")
+            
+            # Retry with a simpler, more direct prompt
+            print(f"Page {page_no}: Retrying with simplified prompt...")
+            try:
+                simple_prompt = f"""Look at these images of a medical/pharmacy bill page {page_no}.
+
+List EVERY item, medicine, service, test, or charge you can see with their amounts.
+
+Return ONLY this JSON format (no other text):
+{{
+  "page_no": "{page_no}",
+  "page_type": "Bill Detail",
+  "bill_items": [
+    {{"item_name": "exact name from bill", "item_amount": 100.00, "item_rate": 50.00, "item_quantity": 2.00}}
+  ]
+}}
+
+If you don't see any items at all, return empty bill_items array."""
+                
+                retry_response = model.generate_content(
+                    [simple_prompt] + image_parts,
+                    generation_config={
+                        'temperature': 0.0,
+                        'top_p': 1.0,
+                        'top_k': 32,
+                        'max_output_tokens': 4096,
+                    }
+                )
+                
+                retry_text = retry_response.text.strip()
+                if retry_text.startswith('```json'):
+                    retry_text = retry_text[7:]
+                elif retry_text.startswith('```'):
+                    retry_text = retry_text[3:]
+                if retry_text.endswith('```'):
+                    retry_text = retry_text[:-3]
+                retry_text = retry_text.strip()
+                
+                retry_data = json.loads(retry_text)
+                if len(retry_data.get('bill_items', [])) > 0:
+                    print(f"Page {page_no}: Retry successful! Extracted {len(retry_data['bill_items'])} items")
+                    extracted_data = retry_data
+                else:
+                    print(f"Page {page_no}: Retry also returned 0 items")
+            except Exception as e:
+                print(f"Page {page_no}: Retry failed - {e}")
         
         extracted_data['token_usage'] = token_usage
         return extracted_data

@@ -1,4 +1,6 @@
-EXTRACTION_SYSTEM_PROMPT = """You are a deterministic, safety-minded extractor. You will be given one page image (and optionally several region crop images) from a medical/pharmacy bill. DO NOT produce any commentary — output EXACT JSON only following the datathon schema. Use numeric floats (two decimal places) for amounts, rates, quantities. If a numeric value cannot be found, set it to null. Do not hallucinate items. When making choices, prefer visual evidence (text present in the image). Always use temperature = 0."""
+EXTRACTION_SYSTEM_PROMPT = """You are a deterministic, safety-minded extractor. You will be given one page image (and optionally several region crop images) from a medical/pharmacy bill. DO NOT produce any commentary — output EXACT JSON only following the datathon schema. Use numeric floats (two decimal places) for amounts, rates, quantities. If a numeric value cannot be found, set it to null. Do not hallucinate items. When making choices, prefer visual evidence (text present in the image). Always use temperature = 0.
+
+CRITICAL: If you see ANY bill items in the image, you MUST extract them. An empty bill_items array should ONLY be returned if the image truly contains no line items at all. Double-check the images before returning empty results."""
 
 EXTRACTION_USER_PROMPT_TEMPLATE = """Input:
 {input_json}
@@ -6,19 +8,25 @@ EXTRACTION_USER_PROMPT_TEMPLATE = """Input:
 Task:
 From the supplied images extract a JSON object for **this page** containing the list of bill line items visible on the page.
 
+IMPORTANT: Examine ALL images carefully. Look for ANY items, services, medicines, tests, charges, or line items with names and amounts. Even if the layout is unconventional, extract ALL visible line items.
+
 Rules (strict):
 1. Inspect the **images** visually. Use the full page first; confirm ambiguous numbers by checking the relevant crop images.
-2. Each bill item must have:
-   - "item_name": text exactly as printed on the bill (trim whitespace).
+2. Extract EVERY line item you see - medicines, services, tests, procedures, consultations, room charges, etc.
+3. Each bill item must have:
+   - "item_name": text exactly as printed on the bill (trim whitespace). Include full item description.
    - "item_amount": Net Amount after discount as printed (float or null).
    - "item_rate": Rate as printed (float or null).
    - "item_quantity": Quantity as printed (float or null).
-3. If the printed layout is tabular, prefer the right-most numeric column as item_amount.
-4. Normalize numeric formats: remove currency symbols and thousands separators. Output floats with two decimals (e.g., 1234.50).
-5. If the item name wraps across lines, combine visually adjacent lines that belong to the same row.
-6. If a numeric value is illegible or missing, set it to null (do not guess). Only infer rate or quantity if Rate * Quantity equals Amount within 1% AND all three numbers are clearly readable.
-7. If multiple distinct numeric candidates are present near the item text, choose the numeric that aligns visually in the same row (same baseline) or the rightmost numeric.
-8. Output EXACT JSON and nothing else.
+4. If the printed layout is tabular, prefer the right-most numeric column as item_amount.
+5. Normalize numeric formats: remove currency symbols and thousands separators. Output floats with two decimals (e.g., 1234.50).
+6. If the item name wraps across lines, combine visually adjacent lines that belong to the same row.
+7. If a numeric value is illegible or missing, set it to null (do not guess). Only infer rate or quantity if Rate * Quantity equals Amount within 1% AND all three numbers are clearly readable.
+8. If multiple distinct numeric candidates are present near the item text, choose the numeric that aligns visually in the same row (same baseline) or the rightmost numeric.
+9. For page_type, choose the most appropriate: "Bill Detail" (has itemized list), "Final Bill" (summary with totals), "Pharmacy" (medicine list), or "Other" (only if truly unclear).
+10. Output EXACT JSON and nothing else.
+
+REMINDER: If you see ANY items in the images, you MUST extract them. Empty bill_items should ONLY occur if there are genuinely no line items visible at all.
 
 Return JSON:
 {{
