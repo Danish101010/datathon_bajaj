@@ -1,0 +1,70 @@
+
+    ### Problem 
+    You will be given a set of bills (invoices) with multiple pages (training data); you need to design and 
+    develop data extraction/summarization models that will ‘extract the line item details from these bills 
+    and also provide ‘individual line item amount’, ‘Sub-total’ and ‘Final Total’ of the bill amounts 
+    extracted (sub-totals will be required only where they exist in the bill). ‘Final Total’ 
+    will be sum (of all individual line items in the bills) without double-counting.
+
+    Its important to ensure that, you don’t miss out on any line item entries and at the same time don’t
+    double count any entries. The closer your ‘Total AI extracted amounts’ is equal to the ‘Actual Bill Total’ 
+    -the better your accuracy.
+
+    ### Tools
+    You are free to use tools and LLM you want to solve this problem.
+
+    ### Submission Format
+    You need to deploy your solution in form of an API endpoint. The Signature of the API is as follows:
+
+    POST /extract-bill-data
+    Content-Type: application/json
+    Request Body:
+    {
+        "document": "https://hackrx.blob.core.windows.net/assets/datathon-IIT/sample_2.png?sv=2025-07-05&spr=https&st=2025-11-24T14%3A13%3A22Z&se=2026-11-25T14%3A13%3A00Z&sr=b&sp=r&sig=WFJYfNw0PJdZOpOYlsoAW0XujYGG1x2HSbcDREiFXSU%3D"
+    }
+    Response Body:
+    {
+        "is_success": true,
+        "data": {
+            "pagewise_line_items": [
+            {
+                "page_no": "1",
+                "bill_items": [
+                {
+                    "item_name": "Livi 300mg Tab",
+                    "item_amount": 448,
+                    "item_rate": 32,
+                    "item_quantity": 14
+                },
+                {
+                    "item_name": "Metnuro",
+                    "item_amount": 124.03,
+                    "item_rate": 17.72,
+                    "item_quantity": 7
+                },
+                {
+                    "item_name": "Pizat 4.5",
+                    "item_amount": 838.12,
+                    "item_rate": 419.06,
+                    "item_quantity": 2
+                },
+                {
+                    "item_name": "Supralite Os Syp",
+                    "item_amount": 289.69,
+                    "item_rate": 289.69,
+                    "item_quantity": 1
+                }
+                ]
+            }
+            ],
+            "total_item_count": 4,
+            "reconciled_amount": 1699.84
+        }
+     }
+            
+   
+    
+   ### Evaluation Criteria
+   The evaluation will be based on the accuracy of the line item data extraction and the bill totals extraction.
+   You need to submit github repository link to the solution.
+   You need to describe your submission in the README.md file.
