@@ -1,0 +1,372 @@
+[
+  {
+    "file": "train_sample_1.pdf",
+    "status": "success",
+    "items_count": 0,
+    "total_amount": 0,
+    "time_seconds": 48.5477659702301,
+    "result": {
+      "is_success": true,
+      "token_usage": {
+        "input_tokens": 1865,
+        "output_tokens": 930,
+        "total_tokens": 4029
+      },
+      "data": {
+        "pagewise_line_items": [
+          {
+            "page_no": "1",
+            "page_type": "Bill Detail",
+            "bill_items": [
+              {
+                "item_name": "2D echocardiography",
+                "item_amount": 1180.0,
+                "item_rate": 1180.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "USG Whole Abdomen Including Pelvis and post Void urine",
+                "item_amount": 640.0,
+                "item_rate": 640.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "X Ray Chest Lateral (one film)",
+                "item_amount": 184.0,
+                "item_rate": 184.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "BED CHARGE GENERAL WARD",
+                "item_amount": 1500.0,
+                "item_rate": 1500.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "BED CHARGE GENERAL WARD",
+                "item_amount": 1500.0,
+                "item_rate": 1500.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "BED CHARGE GENERAL WARD",
+                "item_amount": 1500.0,
+                "item_rate": 1500.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "BED CHARGE GENERAL WARD",
+                "item_amount": 1500.0,
+                "item_rate": 1500.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "Consultation for Inpatients",
+                "item_amount": 700.0,
+                "item_rate": 350.0,
+                "item_quantity": 2.0
+              },
+              {
+                "item_name": "Consultation for Inpatients",
+                "item_amount": 700.0,
+                "item_rate": 350.0,
+                "item_quantity": 2.0
+              },
+              {
+                "item_name": "Consultation for Inpatients",
+                "item_amount": 700.0,
+                "item_rate": 350.0,
+                "item_quantity": 2.0
+              },
+              {
+                "item_name": "Consultation for Inpatients",
+                "item_amount": 350.0,
+                "item_rate": 350.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "BLOOD CULTURE & SENSITIVITY",
+                "item_amount": 368.0,
+                "item_rate": 368.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "BLOOD SUGAR RANDOM (RBS)",
+                "item_amount": 32.0,
+                "item_rate": 32.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "CBC",
+                "item_amount": 240.0,
+                "item_rate": 240.0,
+                "item_quantity": 1.0
+              }
+            ]
+          },
+          {
+            "page_no": "2",
+            "page_type": "Other",
+            "bill_items": []
+          }
+        ],
+        "total_item_count": 9
+      }
+    }
+  },
+  {
+    "file": "train_sample_10.pdf",
+    "status": "success",
+    "items_count": 0,
+    "total_amount": 0,
+    "time_seconds": 38.89609932899475,
+    "result": {
+      "is_success": true,
+      "token_usage": {
+        "input_tokens": 5595,
+        "output_tokens": 1825,
+        "total_tokens": 9574
+      },
+      "data": {
+        "pagewise_line_items": [
+          {
+            "page_no": "1",
+            "page_type": "Bill Detail",
+            "bill_items": [
+              {
+                "item_name": "Consultation(999311)",
+                "item_amount": 79750.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Equipment(999311)",
+                "item_amount": 213250.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Invasive Procedures(999311)",
+                "item_amount": 35720.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Investigations(999311)",
+                "item_amount": 173010.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Medical Records(999311)",
+                "item_amount": 600.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Non Invasive Procedure(999311)",
+                "item_amount": 141120.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Nutritional and Functional Assessment Charges(999311)",
+                "item_amount": 600.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "OT Charges(999311)",
+                "item_amount": 115000.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "OT Consumables(999311)",
+                "item_amount": 52517.96,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "OT Pharmacy(999311)",
+                "item_amount": 2244.47,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Pharmacy Consumables(999311)",
+                "item_amount": 334504.78,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Physiotherapy(999311)",
+                "item_amount": 22500.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Professional Charges(999311)",
+                "item_amount": 102500.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Profile(999311)",
+                "item_amount": 131170.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Room Rent(999311)",
+                "item_amount": 235600.0,
+                "item_rate": null,
+                "item_quantity": null
+              },
+              {
+                "item_name": "Ward Pharmacy(999311)",
+                "item_amount": 569475.95,
+                "item_rate": null,
+                "item_quantity": null
+              }
+            ]
+          },
+          {
+            "page_no": "2",
+            "page_type": "Final Bill",
+            "bill_items": []
+          },
+          {
+            "page_no": "3",
+            "page_type": "Bill Detail",
+            "bill_items": [
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              },
+              {
+                "item_name": "IP CONSULTATION CHARGES",
+                "item_amount": 1000.0,
+                "item_rate": 1000.0,
+                "item_quantity": 1.0
+              }
+            ]
+          }
+        ],
+        "total_item_count": 17
+      }
+    }
+  },
+  {
+    "file": "train_sample_11.pdf",
+    "status": "success",
+    "items_count": 0,
+    "total_amount": 0,
+    "time_seconds": 18.232141971588135,
+    "result": {
+      "is_success": true,
+      "token_usage": {
+        "input_tokens": 1863,
+        "output_tokens": 272,
+        "total_tokens": 4455
+      },
+      "data": {
+        "pagewise_line_items": [
+          {
+            "page_no": "1",
+            "page_type": "Pharmacy",
+            "bill_items": [
+              {
+                "item_name": "OKamet -500",
+                "item_amount": 200.0,
+                "item_rate": null,
+                "item_quantity": 200.0
+              },
+              {
+                "item_name": "Telma -20",
+                "item_amount": 110.0,
+                "item_rate": null,
+                "item_quantity": 30.0
+              },
+              {
+                "item_name": "Talma 20mg",
+                "item_amount": 129.0,
+                "item_rate": null,
+                "item_quantity": 30.0
+              },
+              {
+                "item_name": "Okamel-500",
+                "item_amount": 228.0,
+                "item_rate": null,
+                "item_quantity": 200.0
+              }
+            ]
+          }
+        ],
+        "total_item_count": 4
+      }
+    }
+  }
+]

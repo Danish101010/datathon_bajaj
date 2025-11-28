@@ -9,6 +9,13 @@ from PIL import Image, ImageEnhance, ImageOps
 from pdf2image import convert_from_bytes
 import cv2
 
+# Import advanced preprocessing
+try:
+    from advanced_preprocessing import get_best_preprocessing_pipeline
+    ADVANCED_PREPROCESSING_AVAILABLE = True
+except ImportError:
+    ADVANCED_PREPROCESSING_AVAILABLE = False
+
 
 def download_document(url: str, output_dir: Optional[str] = None) -> Union[str, bytes]:
     """
@@ -263,7 +270,8 @@ def _generate_sliding_window_crops(
 def preprocess_image(
     image_path: str,
     page_no: int = 1,
-    output_dir: Optional[str] = None
+    output_dir: Optional[str] = None,
+    use_advanced: bool = True
 ) -> Dict:
     """
     Preprocess image with deskew, denoise, contrast enhancement, auto-crop, and generate crops.
@@ -272,6 +280,7 @@ def preprocess_image(
         image_path: Path to input image
         page_no: Page number for metadata
         output_dir: Directory to save processed images. If None, uses temp directory.
+        use_advanced: If True, use advanced OCR-optimized preprocessing
     
     Returns:
         Dictionary with metadata:
@@ -294,13 +303,19 @@ def preprocess_image(
     
     img_array = np.array(image)
     
-    img_array = _deskew_image(img_array)
-    img_array = _denoise_image(img_array)
+    # Apply advanced preprocessing if available and requested
+    if use_advanced and ADVANCED_PREPROCESSING_AVAILABLE:
+        img_array = get_best_preprocessing_pipeline(img_array)
+    else:
+        # Fallback to basic preprocessing
+        img_array = _deskew_image(img_array)
+        img_array = _denoise_image(img_array)
+        
+        pil_image = Image.fromarray(img_array)
+        pil_image = _increase_contrast(pil_image, factor=1.5)
+        img_array = np.array(pil_image)
     
-    pil_image = Image.fromarray(img_array)
-    pil_image = _increase_contrast(pil_image, factor=1.5)
-    
-    img_array = np.array(pil_image)
+    # Always apply auto-crop
     img_array = _auto_crop_margins(img_array)
     
     full_image_path = os.path.join(output_dir, f"page_{page_no}_processed.png")

@@ -2,15 +2,17 @@ import os
 import tempfile
 import json
 import base64
+import time
 from typing import List, Dict, Optional
 from pathlib import Path
 import traceback
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import uvicorn
+from google.api_core.exceptions import ResourceExhausted
 
 from image_pipeline import process_document, preprocess_image, pdf_to_images
 from extraction_prompts import create_extraction_prompt, validate_extraction_response
@@ -32,8 +34,24 @@ app.add_middleware(
 )
 
 
+
+# Unified request model for both JSON and form-data
+
+# Unified request model for JSON endpoint
+from pydantic import ConfigDict
+
 class ExtractionRequest(BaseModel):
-    document: str = Field(..., description="URL to download document from")
+    document: str = Field(
+        ...,
+        description="URL to download document from or local file path"
+    )
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "document": ""
+            }
+        }
+    )
 
 
 
@@ -66,8 +84,8 @@ def send_gemini_multimodal(
     
     genai.configure(api_key=api_key)
     
-    # Use gemini-2.5-pro for better accuracy (slightly slower but more accurate)
-    model = genai.GenerativeModel('gemini-2.5-pro')
+    # Use gemini-1.5-flash-latest (stable production model)
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     # Load images using PIL
     image_parts = []
@@ -88,16 +106,30 @@ def send_gemini_multimodal(
     # Create content parts
     content_parts = [full_prompt] + image_parts
     
-    # Generate response
-    response = model.generate_content(
-        content_parts,
-        generation_config={
-            'temperature': temperature,
-            'top_p': 1.0,
-            'top_k': 32,
-            'max_output_tokens': 4096,
-        }
-    )
+    # Generate response with retry logic for quota errors
+    max_retries = 3
+    retry_delay = 20  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            response = model.generate_content(
+                content_parts,
+                generation_config={
+                    'temperature': temperature,
+                    'top_p': 1.0,
+                    'top_k': 32,
+                    'max_output_tokens': 8192,
+                }
+            )
+            break  # Success, exit retry loop
+        except ResourceExhausted as e:
+            if attempt < max_retries - 1:
+                wait_time = retry_delay * (attempt + 1)
+                print(f"Quota exceeded, waiting {wait_time}s before retry {attempt + 2}/{max_retries}...")
+                time.sleep(wait_time)
+            else:
+                print("Max retries reached, quota still exceeded")
+                raise
     
     # Extract JSON from response
     response_text = response.text.strip()
@@ -117,8 +149,23 @@ def send_gemini_multimodal(
         extracted_data = json.loads(response_text)
     except json.JSONDecodeError as e:
         print(f"JSON decode error: {e}")
-        print(f"Response text (full): {response_text}")
-        raise ValueError(f"Failed to parse Gemini response as JSON: {e}")
+        print(f"Response text (first 2000 chars): {response_text[:2000]}")
+        
+        # Try to salvage partial JSON by adding closing braces
+        try:
+            # Count open braces and brackets
+            open_braces = response_text.count('{') - response_text.count('}')
+            open_brackets = response_text.count('[') - response_text.count(']')
+            
+            fixed_text = response_text
+            # Add missing closures
+            fixed_text += '}' * open_braces
+            fixed_text += ']' * open_brackets
+            
+            extracted_data = json.loads(fixed_text)
+            print("Successfully salvaged truncated JSON response")
+        except:
+            raise ValueError(f"Failed to parse Gemini response as JSON: {e}")
     
     # Get token usage
     token_usage = {
@@ -154,16 +201,20 @@ def extract_page_with_gemini(page_meta: Dict, page_type_hint: str) -> Dict:
     page_no = str(page_meta['page_no'])
     full_image_path = page_meta['full_image_path']
     
+    # Optimized: Send only full image + 2-column crops (3 images total instead of 11)
+    # This reduces token usage while maintaining accuracy with better preprocessing
     region_images = []
     image_paths = [full_image_path]
     
-    for crop in page_meta['crops'][1:11]:
-        region_images.append({
-            "crop_id": crop['crop_id'],
-            "bbox": crop['bbox'],
-            "image": f"<crop_{crop['crop_id']}>"
-        })
-        image_paths.append(crop['path'])
+    # Add only 2-column crops (most effective for tabular bills)
+    for crop in page_meta['crops']:
+        if 'col2' in crop['crop_id']:  # Only 2-column crops
+            region_images.append({
+                "crop_id": crop['crop_id'],
+                "bbox": crop['bbox'],
+                "image": f"<crop_{crop['crop_id']}>"
+            })
+            image_paths.append(crop['path'])
     
     prompt_data = create_extraction_prompt(
         page_no=page_no,
@@ -207,52 +258,7 @@ def extract_page_with_gemini(page_meta: Dict, page_type_hint: str) -> Dict:
         if len(extracted_data.get('bill_items', [])) == 0:
             print(f"Page {page_no}: WARNING - No items extracted!")
             print(f"Full response: {json.dumps(extracted_data, indent=2)}")
-            
-            # Retry with a simpler, more direct prompt
-            print(f"Page {page_no}: Retrying with simplified prompt...")
-            try:
-                simple_prompt = f"""Look at these images of a medical/pharmacy bill page {page_no}.
-
-List EVERY item, medicine, service, test, or charge you can see with their amounts.
-
-Return ONLY this JSON format (no other text):
-{{
-  "page_no": "{page_no}",
-  "page_type": "Bill Detail",
-  "bill_items": [
-    {{"item_name": "exact name from bill", "item_amount": 100.00, "item_rate": 50.00, "item_quantity": 2.00}}
-  ]
-}}
-
-If you don't see any items at all, return empty bill_items array."""
-                
-                retry_response = model.generate_content(
-                    [simple_prompt] + image_parts,
-                    generation_config={
-                        'temperature': 0.0,
-                        'top_p': 1.0,
-                        'top_k': 32,
-                        'max_output_tokens': 4096,
-                    }
-                )
-                
-                retry_text = retry_response.text.strip()
-                if retry_text.startswith('```json'):
-                    retry_text = retry_text[7:]
-                elif retry_text.startswith('```'):
-                    retry_text = retry_text[3:]
-                if retry_text.endswith('```'):
-                    retry_text = retry_text[:-3]
-                retry_text = retry_text.strip()
-                
-                retry_data = json.loads(retry_text)
-                if len(retry_data.get('bill_items', [])) > 0:
-                    print(f"Page {page_no}: Retry successful! Extracted {len(retry_data['bill_items'])} items")
-                    extracted_data = retry_data
-                else:
-                    print(f"Page {page_no}: Retry also returned 0 items")
-            except Exception as e:
-                print(f"Page {page_no}: Retry failed - {e}")
+            print(f"Page {page_no}: This may indicate poor image quality or no line items on this page")
         
         extracted_data['token_usage'] = token_usage
         return extracted_data
@@ -310,6 +316,7 @@ async def health():
     }
 
 
+
 @app.post("/extract-bill-data")
 async def extract_bill_data(
     background_tasks: BackgroundTasks,
@@ -317,21 +324,77 @@ async def extract_bill_data(
 ):
     """
     Extract line items from medical/pharmacy bill.
+    Accepts:
+    - JSON: {"document": "<url or local path>"}
+    """
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_files, temp_dir)
+    try:
+        document = request.document
+        print(f"Processing document (URL/path): {document}")
+        pages_metadata = process_document(document, temp_dir)
+
+        extracted_pages = []
+        total_input_tokens = 0
+        total_output_tokens = 0
+        total_tokens = 0
+        for page_meta in pages_metadata:
+            page_type_hint = "Bill Detail | Final Bill | Pharmacy"
+            page_result = extract_page_with_gemini(page_meta, page_type_hint)
+            token_usage = page_result.pop('token_usage', {})
+            total_input_tokens += token_usage.get('input_tokens', 0)
+            total_output_tokens += token_usage.get('output_tokens', 0)
+            total_tokens += token_usage.get('total_tokens', 0)
+            extracted_pages.append(page_result)
+        reconciliation_input = {
+            "pages": extracted_pages,
+            "printed_totals_images": []
+        }
+        final_output = reconcile_extractions(reconciliation_input)
+        final_output['token_usage'] = {
+            'input_tokens': total_input_tokens,
+            'output_tokens': total_output_tokens,
+            'total_tokens': total_tokens
+        }
+        if not validate_reconciliation_output(final_output):
+            raise HTTPException(status_code=500, detail="Invalid output format generated")
+        return JSONResponse(content=final_output)
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"Error during extraction: {error_trace}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "is_success": False,
+                "token_usage": {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
+                "data": {"pagewise_line_items": [], "total_item_count": 0},
+                "error": f"{str(e)}\n\n{error_trace}"
+            }
+        )
+
+
+@app.post("/extract-bill-data-json")
+async def extract_bill_data_json(
+    background_tasks: BackgroundTasks,
+    request: ExtractionRequest
+):
+    """
+    Extract line items from medical/pharmacy bill using JSON request.
     
-    Request Body:
+    Request Body (JSON):
     {
         "document": "https://example.com/bill.pdf"
     }
     
     Response matches exact hackathon schema.
     """
-    document_url = request.document
-    
     temp_dir = tempfile.mkdtemp()
     background_tasks.add_task(cleanup_temp_files, temp_dir)
     
     try:
-        pages_metadata = process_document(document_url, temp_dir)
+        document_path = request.document
+        print(f"Processing document: {document_path}")
+        pages_metadata = process_document(document_path, temp_dir)
         
         extracted_pages = []
         total_input_tokens = 0
@@ -348,6 +411,7 @@ async def extract_bill_data(
             total_tokens += token_usage.get('total_tokens', 0)
             
             extracted_pages.append(page_result)
+            print(f"Page {page_result['page_no']}: Extracted {len(page_result['bill_items'])} items")
         
         reconciliation_input = {
             "pages": extracted_pages,
@@ -369,6 +433,7 @@ async def extract_bill_data(
         
     except Exception as e:
         error_trace = traceback.format_exc()
+        print(f"Error during extraction: {error_trace}")
         return JSONResponse(
             status_code=500,
             content={
